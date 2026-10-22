@@ -1,3 +1,5 @@
+"use client";
+
 import { useState } from "react";
 
 export interface ResilienceScenario {
@@ -11,73 +13,110 @@ interface UncertaintyScenarioProps {
   loading?: boolean;
 }
 
+const SCENARIO_LABELS = ["Rapid AI Automation", "Economic Recession", "Green Tech Boom"];
+
+function clamp(value: number): number {
+  return Math.max(0, Math.min(100, Math.round(value)));
+}
+
 export default function UncertaintyScenario({
   scenarios,
   loading = false,
 }: UncertaintyScenarioProps) {
-  const [selectedScenario, setSelectedScenario] = useState("");
-  const active = scenarios.find((scenario) => scenario.scenario === selectedScenario) ?? scenarios[0];
-  const score = active
-    ? Math.max(0, Math.min(100, Number(active.resilience_score) || 0))
-    : 0;
+  const [severity, setSeverity] = useState(38);
+  const scenarioIndex = severity < 34 ? 0 : severity < 68 ? 1 : 2;
+  const selectedScenario = SCENARIO_LABELS[scenarioIndex];
+  const reference = scenarios[scenarioIndex] ?? scenarios[0];
+  const baseline = reference
+    ? clamp(reference.resilience_score)
+    : [86, 78, 91][scenarioIndex];
+  const resilience = clamp(baseline - severity * 0.32);
+  const stability = clamp(100 - severity * 0.58);
+  const severityLabel = severity < 34 ? "Low" : severity < 68 ? "Moderate" : "High";
 
   return (
-    <section className="rounded-2xl border border-slate-800 bg-slate-900 p-6 shadow-xl sm:p-8" aria-labelledby="scenario-heading">
-      <div className="mb-5">
-        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-blue-400">Stress-test your pathway</p>
-        <h2 id="scenario-heading" className="mt-1 text-xl font-semibold text-white">Uncertainty scenarios</h2>
-        <p className="mt-2 text-sm text-slate-400">Select a market scenario to compare its estimated resilience score.</p>
+    <section className="rounded-2xl border border-gray-800 bg-gray-950 p-6 shadow-xl sm:p-8" aria-labelledby="scenario-heading">
+      <div className="mb-7">
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-rose-300">Stress-test your pathway</p>
+        <h2 id="scenario-heading" className="mt-1 text-xl font-semibold text-white">Future market scenarios</h2>
+        <p className="mt-2 text-sm text-gray-400">Adjust disruption severity to see how your pathway may hold up under changing market conditions.</p>
       </div>
 
       {loading ? (
-        <div className="grid gap-3 sm:grid-cols-3" aria-live="polite" aria-busy="true">
-          {[0, 1, 2].map((item) => <div key={item} className="h-24 animate-pulse rounded-xl bg-slate-800" />)}
-          <span className="sr-only">Loading market scenarios</span>
-        </div>
-      ) : scenarios.length > 0 && active ? (
+        <div className="h-56 animate-pulse rounded-xl bg-gray-900" role="status" aria-label="Loading scenario estimates" />
+      ) : (
         <>
-          <div className="grid gap-3 sm:grid-cols-3">
-            {scenarios.map((scenario) => {
-              const selected = scenario.scenario === active.scenario;
-              return (
-                <button
-                  key={scenario.scenario}
-                  type="button"
-                  aria-pressed={selected}
-                  onClick={() => setSelectedScenario(scenario.scenario)}
-                  className={`rounded-xl border p-4 text-left transition focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                    selected ? "border-blue-500/50 bg-blue-500/10" : "border-slate-800 bg-slate-950/60 hover:border-slate-600"
-                  }`}
-                >
-                  <span className={`mb-3 block h-1 w-10 rounded-full ${selected ? "bg-blue-400" : "bg-slate-700"}`} />
-                  <span className="text-sm font-semibold text-slate-100">{scenario.scenario}</span>
-                </button>
-              );
-            })}
+          <div className="rounded-xl border border-gray-800 bg-black/60 p-5 sm:p-6">
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <p className="text-sm text-gray-400">Selected scenario</p>
+                <h3 className="mt-1 text-lg font-semibold text-white">{selectedScenario}</h3>
+              </div>
+              <span className="rounded-full border border-rose-400/20 bg-rose-400/10 px-3 py-1 text-xs font-semibold text-rose-200">
+                {severityLabel} disruption · {severity}%
+              </span>
+            </div>
+
+            <label htmlFor="disruption-severity" className="mt-7 block text-sm font-medium text-gray-300">
+              Market disruption severity
+            </label>
+            <input
+              id="disruption-severity"
+              type="range"
+              min={0}
+              max={100}
+              step={1}
+              value={severity}
+              onChange={(event) => setSeverity(Number(event.target.value))}
+              className="mt-3 h-2 w-full cursor-pointer appearance-none rounded-full bg-gray-800 accent-rose-400 focus:outline-none focus:ring-2 focus:ring-rose-400/50"
+              aria-valuetext={`${severityLabel} disruption, ${severity} percent`}
+            />
+            <div className="mt-2 flex justify-between text-xs text-gray-500"><span>Lower</span><span>Higher</span></div>
+
+            <div className="mt-7 grid gap-4 sm:grid-cols-2">
+              <Metric label="Pathway resilience" value={resilience} />
+              <Metric label="Estimated job stability" value={stability} />
+            </div>
+            <p className="mt-5 text-sm leading-6 text-gray-400">
+              {reference?.rationale ?? "Illustrative estimates show how adaptable skills and continuous learning can support career resilience as market conditions shift."}
+            </p>
           </div>
 
-          <div className="mt-5 rounded-xl border border-slate-800 bg-slate-950/70 p-5" aria-live="polite">
-            <div className="flex flex-wrap items-end justify-between gap-3">
-              <div>
-                <p className="text-sm text-slate-400">Estimated pathway resilience</p>
-                <h3 className="mt-1 text-lg font-semibold text-white">{active.scenario}</h3>
-              </div>
-              <p className="text-3xl font-bold text-cyan-300">
-                {score}<span className="ml-1 text-base font-medium text-slate-500">/100</span>
-              </p>
-            </div>
-            <div className="mt-4 h-2 overflow-hidden rounded-full bg-slate-800" role="progressbar" aria-label={`${active.scenario} resilience`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={score}>
-              <div className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-cyan-300 transition-[width] duration-500" style={{ width: `${score}%` }} />
-            </div>
-            <p className="mt-4 text-sm leading-6 text-slate-300">{active.rationale}</p>
-            <p className="mt-3 text-xs text-slate-500">Model estimate for comparison; not an observed labor-market statistic.</p>
+          <div className="mt-4 grid gap-3 sm:grid-cols-3">
+            {SCENARIO_LABELS.map((label, index) => (
+              <button
+                key={label}
+                type="button"
+                onClick={() => setSeverity(index === 0 ? 20 : index === 1 ? 50 : 82)}
+                aria-pressed={scenarioIndex === index}
+                className={`rounded-xl border px-4 py-3 text-left text-sm transition ${scenarioIndex === index ? "border-rose-400/50 bg-rose-500/10 text-rose-100" : "border-gray-800 bg-gray-900/60 text-gray-400 hover:border-gray-600 hover:text-gray-200"}`}
+              >
+                {label}
+              </button>
+            ))}
           </div>
+          <p className="mt-4 text-xs text-gray-500">Illustrative scenario estimates for comparison; these are not observed labor-market statistics.</p>
         </>
-      ) : (
-        <div className="rounded-xl border border-dashed border-slate-800 bg-slate-950/50 p-6 text-center text-sm text-slate-400">
-          Scenario estimates will appear after profile analysis.
-        </div>
       )}
     </section>
+  );
+}
+
+interface MetricProps {
+  label: string;
+  value: number;
+}
+
+function Metric({ label, value }: MetricProps) {
+  return (
+    <div className="rounded-lg border border-gray-800 bg-gray-950 p-4">
+      <div className="flex items-center justify-between gap-3">
+        <span className="text-sm text-gray-400">{label}</span>
+        <span className="text-xl font-semibold tabular-nums text-white">{value}<span className="ml-0.5 text-xs text-gray-500">%</span></span>
+      </div>
+      <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-gray-800" role="progressbar" aria-label={label} aria-valuemin={0} aria-valuemax={100} aria-valuenow={value}>
+        <div className="h-full rounded-full bg-gradient-to-r from-rose-600 to-pink-300 transition-[width] duration-300" style={{ width: `${value}%` }} />
+      </div>
+    </div>
   );
 }

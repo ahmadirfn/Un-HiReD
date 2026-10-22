@@ -34,7 +34,7 @@ export default function RoleRanking({
   return (
     <section className="rounded-2xl border border-slate-800 bg-slate-900 p-6 shadow-xl sm:p-8" aria-labelledby="role-ranking-heading">
       <div className="mb-5">
-        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-blue-400">Explore your options</p>
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-rose-300">Explore your options</p>
         <h2 id="role-ranking-heading" className="mt-1 text-xl font-semibold text-white">Ranked future roles</h2>
         <p className="mt-2 text-sm text-slate-400">Select a role to refresh its pathway and market signals.</p>
       </div>
@@ -58,8 +58,8 @@ export default function RoleRanking({
                   type="button"
                   aria-pressed={selected}
                   onClick={() => onSelectRole(role)}
-                  className={`w-full rounded-xl border p-4 text-left transition hover:-translate-y-0.5 hover:border-blue-500/40 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                    selected ? "border-blue-500/50 bg-blue-500/5" : "border-slate-800 bg-slate-950/60"
+                  className={`w-full rounded-xl border p-4 text-left transition hover:-translate-y-0.5 hover:border-rose-500/40 focus:outline-none focus:ring-2 focus:ring-rose-500 ${
+                    selected ? "border-rose-500/50 bg-rose-500/5" : "border-slate-800 bg-slate-950/60"
                   }`}
                 >
                   <div className="flex flex-wrap items-start justify-between gap-3">
@@ -67,13 +67,13 @@ export default function RoleRanking({
                       <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">#{index + 1} match</p>
                       <h3 className="mt-1 font-semibold text-white">{role.role}</h3>
                     </div>
-                    <span className="rounded-full border border-blue-400/20 bg-blue-400/10 px-2.5 py-1 text-xs font-semibold text-blue-200">
+                    <span className="rounded-full border border-rose-400/20 bg-rose-400/10 px-2.5 py-1 text-xs font-semibold text-rose-200">
                       {score}% match
                     </span>
                   </div>
 
                   <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-slate-800">
-                    <div className="h-full rounded-full bg-gradient-to-r from-blue-500 to-cyan-300" style={{ width: `${score}%` }} />
+                    <div className="h-full rounded-full bg-gradient-to-r from-rose-600 to-pink-300 transition-[width] duration-500" style={{ width: `${score}%` }} />
                   </div>
 
                   <div className="mt-3 flex flex-wrap gap-2">

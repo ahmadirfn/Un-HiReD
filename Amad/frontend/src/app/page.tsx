@@ -8,6 +8,8 @@ import RoleRanking, { type RankedRole } from "../components/RoleRanking";
 import SdgMapping, { type SdgMappingItem } from "../components/SdgMapping";
 import UncertaintyScenario from "../components/UncertaintyScenario";
 
+type DashboardTab = "matches" | "impact" | "scenarios";
+
 interface RecommendationResponse {
   trends?: TrendsData;
   analysis?: AnalysisData;
@@ -34,7 +36,9 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<RecommendationResponse | null>(null);
   const [error, setError] = useState("");
+  const [activeTab, setActiveTab] = useState<DashboardTab>("matches");
   const dashboardRef = useRef<HTMLDivElement>(null);
+  const tabPanelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!onboardingComplete || !dashboardRef.current) return;
@@ -46,6 +50,15 @@ export default function Home() {
       { duration: 650, easing: "cubic-bezier(0.2, 0.8, 0.2, 1)" },
     );
   }, [onboardingComplete]);
+
+  useEffect(() => {
+    const panel = tabPanelRef.current;
+    if (!panel || !onboardingComplete) return;
+    panel.animate(
+      [{ opacity: 0, transform: "translateY(6px)" }, { opacity: 1, transform: "translateY(0)" }],
+      { duration: 220, easing: "ease-out" },
+    );
+  }, [activeTab, onboardingComplete]);
 
   async function requestRecommendation(nextProfile: BaseProfile): Promise<boolean> {
     setLoading(true);
@@ -179,17 +192,43 @@ export default function Home() {
             {error && <div role="alert" className="rounded-xl border border-rose-900/70 bg-rose-950/40 p-4 text-sm text-rose-200">{error}</div>}
 
             {results && (
-              <div className="space-y-8">
-                {results.trends ? (
-                  <MarketTrends trends={results.trends} />
-                ) : (
-                  <div className="rounded-xl border border-gray-800 bg-gray-950 p-5 text-sm text-gray-400">Market trend data was not returned for this profile.</div>
-                )}
-                {analysis && <PathwayDashboard analysis={analysis} />}
-                <RoleRanking roles={rankedRoles} selectedRole={profile?.target_role ?? ""} loading={loading} onSelectRole={handleRoleSelect} />
-                <SdgMapping mappings={toSdgMappings(analysis)} />
-                <UncertaintyScenario scenarios={analysis?.scenario_resilience ?? []} loading={loading} />
-              </div>
+              <>
+                <nav role="tablist" aria-label="Dashboard sections" className="flex gap-1 overflow-x-auto rounded-xl border border-gray-800 bg-gray-950 p-1">
+                  {([
+                    ["matches", "Career Matches"],
+                    ["impact", "Global Impact"],
+                    ["scenarios", "Future Scenarios"],
+                  ] as const).map(([tab, label]) => (
+                    <button
+                      key={tab}
+                      type="button"
+                      role="tab"
+                      aria-selected={activeTab === tab}
+                      aria-controls="dashboard-tab-panel"
+                      onClick={() => setActiveTab(tab)}
+                      className={`min-w-max flex-1 rounded-lg px-4 py-3 text-sm font-medium transition-colors duration-200 ${activeTab === tab ? "bg-rose-500/15 text-rose-200 shadow-sm" : "text-gray-400 hover:bg-gray-900 hover:text-gray-100"}`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </nav>
+
+                <div ref={tabPanelRef} id="dashboard-tab-panel" role="tabpanel" className="space-y-8">
+                  {activeTab === "matches" && (
+                    <div className="space-y-8">
+                      <RoleRanking roles={rankedRoles} selectedRole={profile?.target_role ?? ""} loading={loading} onSelectRole={handleRoleSelect} />
+                      {results.trends ? (
+                        <MarketTrends trends={results.trends} />
+                      ) : (
+                        <div className="rounded-xl border border-gray-800 bg-gray-950 p-5 text-sm text-gray-400">Market trend data was not returned for this profile.</div>
+                      )}
+                      {analysis && <PathwayDashboard analysis={analysis} />}
+                    </div>
+                  )}
+                  {activeTab === "impact" && <SdgMapping mappings={toSdgMappings(analysis)} />}
+                  {activeTab === "scenarios" && <UncertaintyScenario scenarios={analysis?.scenario_resilience ?? []} loading={loading} />}
+                </div>
+              </>
             )}
           </div>
         )}
