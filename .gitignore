@@ -1,0 +1,39 @@
+# Node.js and Next.js dependencies, caches, and build output
+node_modules/
+.next/
+out/
+build/
+.pnpm-store/
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# Python bytecode, environments, test caches, and packaging output
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*$py.class
+.venv/
+venv/
+env/
+*.sqlite3
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+dist/
+*.egg-info/
+
+# Local environment and secrets
+.env
+.env.local
+.env.*.local
+
+# Operating system and editor files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
