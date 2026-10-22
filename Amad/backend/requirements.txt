@@ -3,3 +3,6 @@ uvicorn
 pandas
 pydantic
 openai
+python-multipart
+pypdf
+python-docx

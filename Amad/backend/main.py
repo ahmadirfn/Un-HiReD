@@ -1,7 +1,8 @@
-﻿from fastapi import FastAPI, HTTPException
+﻿from fastapi import FastAPI, File, HTTPException, UploadFile
 from pydantic import BaseModel, Field
 
 from llm_engine import generate_reskilling_pathway
+from resume_parser import parse_resume
 from trend_analyzer import analyze_skills_gap
 
 app = FastAPI(
@@ -14,6 +15,30 @@ app = FastAPI(
 class UserProfile(BaseModel):
     current_skills: list[str] = Field(default_factory=list)
     target_role: str
+    current_role: str = ""
+    years_experience: int = Field(default=0, ge=0)
+
+
+@app.post("/api/resume/parse")
+async def parse_uploaded_resume(file: UploadFile = File(...)) -> dict:
+    """Extract basic profile fields from a PDF or DOCX resume locally."""
+    filename = file.filename or ""
+    if not filename.lower().endswith((".pdf", ".docx")):
+        raise HTTPException(status_code=415, detail="Upload a PDF or DOCX resume.")
+
+    content = await file.read(10 * 1024 * 1024 + 1)
+    if len(content) > 10 * 1024 * 1024:
+        raise HTTPException(status_code=413, detail="Resume must be 10 MB or smaller.")
+
+    try:
+        return parse_resume(filename, content)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception:
+        raise HTTPException(
+            status_code=422,
+            detail="Could not read this resume. Check that the file is a valid PDF or DOCX.",
+        ) from exc
 
 
 @app.post("/api/trends")
@@ -33,7 +58,6 @@ def get_recommendation(profile: UserProfile) -> dict:
     try:
         analysis = generate_reskilling_pathway(profile_data, trend_data)
     except RuntimeError as exc:
-        # Missing API key and empty model output are configuration/upstream issues.
         status_code = 503 if "OPENAI_API_KEY" in str(exc) else 502
         raise HTTPException(status_code=status_code, detail=str(exc)) from exc
     except Exception as exc:

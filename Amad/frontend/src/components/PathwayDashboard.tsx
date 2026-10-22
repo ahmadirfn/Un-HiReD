@@ -16,6 +16,8 @@ export interface SdgItem {
   details?: string;
   goal?: string;
   justification?: string;
+  alignment_score?: number;
+  impact_indicator?: string;
 }
 
 export interface AlternativeRole {
@@ -45,6 +47,11 @@ export interface AnalysisData {
         assumptions?: string[];
         estimated_impact?: string;
       }>;
+  scenario_resilience?: Array<{
+    scenario: string;
+    resilience_score: number;
+    rationale: string;
+  }>;
 }
 
 interface PathwayDashboardProps {
@@ -59,6 +66,7 @@ function sdgNumber(value: number | string) {
 function sdgColor(number: number) {
   if (number === 4) return "bg-[#C5192D]";
   if (number === 8) return "bg-[#A21942]";
+  if (number === 9) return "bg-[#FD6925]";
   return "bg-blue-700";
 }
 
