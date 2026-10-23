@@ -18,11 +18,11 @@ export default function SdgMapping({ sdgs }: SdgMappingProps) {
   const orderedSdgs = [4, 8, 9].map((number) => sdgs.find((item) => item.sdgNumber === number)).filter((item): item is SdgAlignment => Boolean(item));
 
   return (
-    <section className="rounded-2xl border border-gray-800 bg-gray-950 p-6 shadow-xl sm:p-8" aria-labelledby="sdg-mapping-heading">
+    <section className="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-xl dark:border-slate-800 dark:bg-[#161b22] sm:p-8" aria-labelledby="sdg-mapping-heading">
       <div className="mb-5">
-        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-rose-300">Career impact</p>
-        <h2 id="sdg-mapping-heading" className="mt-1 text-xl font-semibold text-white">UN Sustainable Development Goals</h2>
-        <p className="mt-2 text-sm text-gray-400">Potential alignment of this career pathway with global development goals.</p>
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-rose-700 dark:text-rose-300">Career impact</p>
+        <h2 id="sdg-mapping-heading" className="mt-1 text-xl font-semibold text-gray-900 dark:text-white">UN Sustainable Development Goals</h2>
+        <p className="mt-2 text-sm text-slate-600 dark:text-gray-400">Potential alignment of this career pathway with global development goals.</p>
       </div>
 
       {orderedSdgs.length > 0 ? (
@@ -49,7 +49,7 @@ export default function SdgMapping({ sdgs }: SdgMappingProps) {
           })}
         </div>
       ) : (
-        <div className="rounded-xl border border-dashed border-gray-800 bg-black/50 p-6 text-center text-sm text-gray-400">SDG alignments will appear after profile analysis.</div>
+        <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-6 text-center text-sm text-slate-700 dark:border-slate-800 dark:bg-black/50 dark:text-slate-300">SDG alignments will appear after profile analysis.</div>
       )}
     </section>
   );

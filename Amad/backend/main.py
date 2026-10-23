@@ -25,6 +25,14 @@ class UserIntake(BaseModel):
     techStack: list[str]
 
 
+class LearningResource(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    platform: str
+    title: str
+    url: str
+
+
 class RoleMatch(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True)
 
@@ -32,6 +40,7 @@ class RoleMatch(BaseModel):
     matchScore: int = Field(ge=0, le=100)
     skillsGap: list[str]
     demandTrajectory: str
+    resources: list[LearningResource]
 
 
 class SdgAlignment(BaseModel):
@@ -50,7 +59,7 @@ class DashboardResponse(BaseModel):
 
 
 app = FastAPI(
-    title="Aiversecity Future-Ready Workforce Co-Pilot",
+    title="Un-HiReD Future-Ready Workforce Co-Pilot",
     description="Career recommendations and SDG alignment based on a user's intake profile.",
     version="1.0.0",
 )
@@ -80,15 +89,32 @@ def _generate_dashboard(intake: UserIntake) -> dict:
 Analyze the user's goal, situation, experience, and current tech stack. Recommend
 ambitious, high-growth, future-ready technology roles that strategically build on
 the user's existing baseline. Include 3 to 5 distinct ranked roles. Scores must be
-integer match estimates from 0 to 100; skill gaps must be concise, actionable
-skills the person should build; demandTrajectory should briefly describe the role's
-expected market direction without inventing precise statistics or citing unsupported
-data. Include one alignment for each UN Sustainable Development Goal 4, 8, and 9:
+integer match estimates from 0 to 100. `skillsGap` must be a flat array of short,
+simple skill or tool names only, such as ["Django", "SQL", "Git"]. Do not use
+categories, nested data, or long descriptions in skillsGap. `demandTrajectory` must
+be an extremely brief, accessible phrase of typically 4 to 8 words, such as
+"Growing demand for developers", "High demand for data experts", or "Increasing
+need for digital administrators". Do not include explanations, statistics, or
+unsupported claims in this field.
+
+For every role, include 2 useful learning resources. Each resource must have a
+platform, a concise title, and a real, transparent HTTPS search URL. NEVER guess
+specific course URLs or slugs. You must ONLY generate search query URLs for learning
+platforms, using one of these exact formats and replacing the bracketed text with a
+short, beginner-friendly topic:
+Udemy: https://www.udemy.com/courses/search/?q=[topic+name]
+Coursera: https://www.coursera.org/search?query=[topic+name]
+YouTube: https://www.youtube.com/results?search_query=[topic+name]
+edX: https://www.edx.org/search?q=[topic+name]
+Encode spaces in the query as + or %20, remove the square brackets from the final
+URL, and use the matching platform name in the `platform` field. Never provide a
+homepage URL, direct course URL, video URL, or any URL outside these search formats.
+Include one alignment for each UN Sustainable Development Goal 4, 8, and 9:
 4 Quality Education, 8 Decent Work and Economic Growth, and 9 Industry, Innovation
 and Infrastructure. Give each an integer alignment score from 0 to 100 and a brief,
 specific impact description. Return only valid raw JSON, without markdown fences or
 additional text, matching this exact schema:
-{"roles":[{"roleName":"str","matchScore":0,"skillsGap":["str"],"demandTrajectory":"str"}],
+{"roles":[{"roleName":"str","matchScore":0,"skillsGap":["str"],"demandTrajectory":"brief 4-8 word insight","resources":[{"platform":"str","title":"str","url":"HTTPS learning-platform search query URL"}]}],
 "sdgs":[{"sdgNumber":4,"alignmentScore":0,"impactDescription":"str"}]}.
 Use only SDG numbers 4, 8, and 9, and include each of those three goals."""
     user_message = "Career intake profile:\n" + intake.model_dump_json(indent=2)

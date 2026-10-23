@@ -19,6 +19,9 @@ export interface BaseProfile extends OnboardingProfile {
   current_skills: string[];
   years_experience: number;
   target_role: string;
+  hasUploadedCV: boolean;
+  resumePreviewUrl: string | null;
+  resumeFileName: string | null;
 }
 
 interface ParsedResume {
@@ -48,6 +51,9 @@ const STEPS = [
   "Your toolkit",
   "Your resume",
 ];
+
+const FIRST_JOB_STEPS = [0, 1, 4, 5];
+const FULL_WIZARD_STEPS = [0, 1, 2, 3, 4, 5];
 
 const GOALS: GoalOption[] = [
   {
@@ -129,12 +135,18 @@ export default function OnboardingWizard({
   const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
   const [customSkills, setCustomSkills] = useState("");
   const [resumeFile, setResumeFile] = useState<File | null>(null);
+  const [resumeFileUrl, setResumeFileUrl] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
   const [parsingResume, setParsingResume] = useState(false);
   const [error, setError] = useState("");
   const [animating, setAnimating] = useState(false);
+  const [pendingProfile, setPendingProfile] = useState<BaseProfile | null>(null);
   const stepPanelRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const resumeFileUrlRef = useRef<string | null>(null);
+  const resumePreviewTransferred = useRef(false);
+  const visibleSteps = goal?.id === "first-job" ? FIRST_JOB_STEPS : FULL_WIZARD_STEPS;
+  const activeStepPosition = visibleSteps.indexOf(step);
 
   useEffect(() => {
     const panel = stepPanelRef.current;
@@ -151,9 +163,25 @@ export default function OnboardingWizard({
     return () => animation.cancel();
   }, [step]);
 
+  useEffect(() => () => {
+    if (!resumePreviewTransferred.current && resumeFileUrlRef.current) {
+      URL.revokeObjectURL(resumeFileUrlRef.current);
+    }
+  }, []);
+
   function moveToStep(nextStep: number) {
     setError("");
     setStep(Math.max(0, Math.min(STEPS.length - 1, nextStep)));
+  }
+
+  function moveToNextStep() {
+    const nextStep = visibleSteps[Math.min(activeStepPosition + 1, visibleSteps.length - 1)];
+    if (nextStep !== undefined) moveToStep(nextStep);
+  }
+
+  function moveToPreviousStep() {
+    const previousStep = visibleSteps[Math.max(activeStepPosition - 1, 0)];
+    if (previousStep !== undefined) moveToStep(previousStep);
   }
 
   function validateCurrentStep() {
@@ -183,15 +211,27 @@ export default function OnboardingWizard({
     if (!filename.endsWith(".pdf") && !filename.endsWith(".docx")) {
       setError("Choose a PDF or DOCX resume.");
       setResumeFile(null);
+      clearResumePreview();
       return;
     }
     if (candidate.size > 10 * 1024 * 1024) {
       setError("Resume files must be 10 MB or smaller.");
       setResumeFile(null);
+      clearResumePreview();
       return;
     }
+    clearResumePreview();
+    const previewUrl = URL.createObjectURL(candidate);
+    resumeFileUrlRef.current = previewUrl;
+    setResumeFileUrl(previewUrl);
     setError("");
     setResumeFile(candidate);
+  }
+
+  function clearResumePreview() {
+    if (resumeFileUrlRef.current) URL.revokeObjectURL(resumeFileUrlRef.current);
+    resumeFileUrlRef.current = null;
+    setResumeFileUrl(null);
   }
 
   function handleDrop(event: DragEvent<HTMLDivElement>) {
@@ -257,9 +297,18 @@ export default function OnboardingWizard({
       experience_level: experienceLevel,
       current_role: currentRole.trim() || parsed.current_role || situation,
       current_skills: allSkills,
-      years_experience: parsed.years_experience || yearsExperience,
+      years_experience: parsed.years_experience ?? yearsExperience,
       target_role: targetRole,
+      hasUploadedCV: Boolean(resumeFile && !skipResume),
+      resumePreviewUrl: resumeFile && !skipResume ? resumeFileUrl : null,
+      resumeFileName: resumeFile && !skipResume ? resumeFile.name : null,
     };
+
+    if (profile.hasUploadedCV) {
+      setPendingProfile(profile);
+      setParsingResume(false);
+      return;
+    }
 
     try {
       // Skipping the resume intentionally bypasses multipart parsing. The page
@@ -270,15 +319,25 @@ export default function OnboardingWizard({
     }
   }
 
-  const progress = ((step + 1) / STEPS.length) * 100;
+  async function confirmExtractedProfile() {
+    if (!pendingProfile) return;
+    const confirmedProfile = pendingProfile;
+    setPendingProfile(null);
+    resumePreviewTransferred.current = Boolean(confirmedProfile.resumePreviewUrl);
+    await onComplete(confirmedProfile);
+  }
+
+  const progress = ((activeStepPosition + 1) / visibleSteps.length) * 100;
+  const isFinalStep = activeStepPosition === visibleSteps.length - 1;
   const busy = loading || parsingResume;
 
   return (
+    <>
     <section className="mx-auto w-full max-w-2xl rounded-3xl border border-gray-800 bg-gray-950 p-6 shadow-2xl shadow-black/30 sm:p-9">
       <div className="mb-8">
         <div className="mb-3 flex items-center justify-between text-xs font-medium uppercase tracking-[0.16em] text-gray-500">
           <span>Getting started</span>
-          <span>STEP {String(step + 1).padStart(2, "0")} / 06</span>
+          <span>STEP {String(activeStepPosition + 1).padStart(2, "0")} / {String(visibleSteps.length).padStart(2, "0")}</span>
         </div>
         <div className="h-1 overflow-hidden rounded-full bg-gray-800">
           <div
@@ -287,22 +346,23 @@ export default function OnboardingWizard({
           />
         </div>
         <div className="mt-3 flex justify-between gap-1" aria-hidden="true">
-          {STEPS.map((label, index) => (
+          {visibleSteps.map((stepIndex, index) => (
             <span
-              key={label}
-              className={`h-1 w-1 rounded-full ${index <= step ? "bg-rose-400" : "bg-gray-700"}`}
+              key={STEPS[stepIndex]}
+              className={`h-1 w-1 rounded-full ${index <= activeStepPosition ? "bg-rose-400" : "bg-gray-700"}`}
             />
           ))}
         </div>
       </div>
 
       <div ref={stepPanelRef} aria-live="polite" className={animating ? "will-change-transform" : ""}>
-        <p className="text-sm font-medium text-rose-300">{STEPS[step]}</p>
+        {step !== 0 && <p className="text-sm font-medium text-rose-300">{STEPS[step]}</p>}
         {step === 0 && (
           <div className="mt-3 space-y-5">
-            <h1 className="text-3xl font-semibold tracking-tight text-white sm:text-4xl">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-rose-300">Un-HiReD</p>
+            <h2 className="text-2xl font-semibold tracking-tight text-white sm:text-3xl">
               First, what should we call you?
-            </h1>
+            </h2>
             <p className="text-sm leading-6 text-gray-400">We’ll use your name to personalize your career workspace.</p>
             <input
               value={firstName}
@@ -330,6 +390,17 @@ export default function OnboardingWizard({
                   onClick={() => {
                     setGoal(option);
                     setTargetRole(option.suggestedRole);
+                    if (option.id === "first-job") {
+                      setSituation("Student / Fresh Graduate");
+                      setCurrentRole("Student / Fresh Graduate");
+                      setExperienceLevel("0-1 Years Experience");
+                      setYearsExperience(0);
+                    } else if (goal?.id === "first-job") {
+                      setSituation("");
+                      setCurrentRole("");
+                      setExperienceLevel("");
+                      setYearsExperience(0);
+                    }
                     setError("");
                   }}
                   className={`rounded-2xl border p-4 text-left transition ${goal?.id === option.id ? "border-rose-400/60 bg-rose-500/10" : "border-gray-800 bg-black/60 hover:border-gray-600"}`}
@@ -480,17 +551,17 @@ export default function OnboardingWizard({
       <div className="mt-8 flex items-center justify-between border-t border-gray-800 pt-5">
         <button
           type="button"
-          disabled={step === 0 || busy}
-          onClick={() => moveToStep(step - 1)}
+          disabled={activeStepPosition === 0 || busy}
+          onClick={moveToPreviousStep}
           className="rounded-lg px-4 py-2.5 text-sm font-medium text-gray-400 transition hover:text-white disabled:cursor-not-allowed disabled:opacity-30"
         >
           Back
         </button>
-        {step < STEPS.length - 1 ? (
+        {!isFinalStep ? (
           <button
             type="button"
             disabled={busy || animating}
-            onClick={() => validateCurrentStep() && moveToStep(step + 1)}
+            onClick={() => validateCurrentStep() && moveToNextStep()}
             className="rounded-xl bg-rose-500 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-rose-950/40 transition hover:bg-rose-400 focus:outline-none focus:ring-2 focus:ring-rose-300 disabled:cursor-not-allowed disabled:opacity-60"
           >
             Continue
@@ -508,6 +579,57 @@ export default function OnboardingWizard({
         )}
       </div>
     </section>
+    {pendingProfile && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm" role="presentation">
+        <section
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="extracted-profile-title"
+          className="w-full max-w-6xl rounded-3xl border border-gray-800 bg-gray-950 p-6 shadow-2xl sm:p-8"
+        >
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-rose-300">Resume analysis complete</p>
+          <h2 id="extracted-profile-title" className="mt-2 text-2xl font-semibold text-white">Extracted Profile</h2>
+          <p className="mt-2 text-sm leading-6 text-gray-400">Review the skills we found and the possible directions we’ll use to shape your dashboard.</p>
+
+          <div className="mt-6 grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
+            <section className="min-w-0 rounded-2xl border border-gray-800 bg-black/50 p-3">
+              <h3 className="px-2 py-1 font-semibold text-white">Resume preview</h3>
+              <ResumePreview url={pendingProfile.resumePreviewUrl} fileName={pendingProfile.resumeFileName} />
+            </section>
+            <div className="space-y-4">
+              <section className="rounded-2xl border border-gray-800 bg-black/50 p-4">
+                <h3 className="font-semibold text-white">Skills Identified</h3>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {pendingProfile.current_skills.length > 0 ? pendingProfile.current_skills.map((skill) => (
+                    <span key={skill} className="rounded-full border border-rose-400/20 bg-rose-400/10 px-3 py-1.5 text-xs text-rose-100">{skill}</span>
+                  )) : <p className="text-sm text-gray-400">No specific skills were extracted. Your selected toolkit will still be used.</p>}
+                </div>
+              </section>
+              <section className="rounded-2xl border border-gray-800 bg-black/50 p-4">
+                <h3 className="font-semibold text-white">Future Potential</h3>
+                <p className="mt-1 text-xs text-gray-500">Possible directions based on your goal and profile.</p>
+                <ul className="mt-3 space-y-2 text-sm text-gray-300">
+                  {[pendingProfile.target_role, "AI workflow automation", "Applied data analysis"].map((item) => (
+                    <li key={item} className="flex items-start gap-2"><span className="mt-1 text-rose-300" aria-hidden="true">✦</span><span>{item}</span></li>
+                  ))}
+                </ul>
+              </section>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => void confirmExtractedProfile()}
+            disabled={loading}
+            className="mt-7 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-rose-500 px-5 py-3 font-semibold text-white shadow-lg shadow-rose-950/40 transition hover:bg-rose-400 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {loading && <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" aria-hidden="true" />}
+            {loading ? "Building your dashboard..." : "Confirm & Generate Dashboard"}
+          </button>
+        </section>
+      </div>
+    )}
+    </>
   );
 }
 
@@ -515,6 +637,23 @@ interface ChoicePillProps {
   children: string;
   selected: boolean;
   onClick: () => void;
+}
+
+function ResumePreview({ url, fileName }: { url: string | null; fileName: string | null }) {
+  if (!url || !fileName) {
+    return <p className="p-4 text-sm text-gray-400">The resume preview is unavailable.</p>;
+  }
+
+  if (fileName.toLowerCase().endsWith(".pdf")) {
+    return <iframe src={url} className="mt-2 h-[55vh] w-full rounded-lg border border-slate-800" title="Your Resume" />;
+  }
+
+  return (
+    <div className="mt-2 flex min-h-48 flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-slate-700 p-6 text-center">
+      <p className="text-sm text-gray-300">DOCX previews are not supported in the browser.</p>
+      <a href={url} download={fileName} className="text-sm font-medium text-rose-300 underline underline-offset-4 hover:text-rose-200">Download {fileName}</a>
+    </div>
+  );
 }
 
 function ChoicePill({ children, selected, onClick }: ChoicePillProps) {
