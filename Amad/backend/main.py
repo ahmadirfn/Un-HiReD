@@ -1,60 +1,137 @@
-﻿import json
+import json
+import os
+from typing import Literal
 
+from dotenv import load_dotenv
 from fastapi import FastAPI, File, HTTPException, Request, UploadFile
-from pydantic import BaseModel, Field, ValidationError
+from fastapi.middleware.cors import CORSMiddleware
+from openai import OpenAI
+from pydantic import BaseModel, ConfigDict, Field
 from starlette.concurrency import run_in_threadpool
 
-from llm_engine import generate_reskilling_pathway
 from resume_parser import parse_resume
-from trend_analyzer import analyze_skills_gap
+
+
+load_dotenv()
+
+
+class UserIntake(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    firstName: str
+    goal: str
+    situation: str
+    experience: str
+    techStack: list[str]
+
+
+class RoleMatch(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    roleName: str
+    matchScore: int = Field(ge=0, le=100)
+    skillsGap: list[str]
+    demandTrajectory: str
+
+
+class SdgAlignment(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    sdgNumber: Literal[4, 8, 9]
+    alignmentScore: int = Field(ge=0, le=100)
+    impactDescription: str
+
+
+class DashboardResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    roles: list[RoleMatch]
+    sdgs: list[SdgAlignment]
+
 
 app = FastAPI(
-    title="AI-Trend Signal Layer",
-    description="Returns job trend matches and evidence-based reskilling recommendations.",
+    title="Aiversecity Future-Ready Workforce Co-Pilot",
+    description="Career recommendations and SDG alignment based on a user's intake profile.",
     version="1.0.0",
 )
 
-
-class UserProfile(BaseModel):
-    current_skills: list[str] = Field(default_factory=list)
-    target_role: str
-    current_role: str = ""
-    years_experience: int = Field(default=0, ge=0)
-    first_name: str = ""
-    career_goal: str = ""
-    current_situation: str = ""
-    experience_level: str = ""
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=False,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
-def _build_recommendation(profile: UserProfile) -> dict:
-    profile_data = profile.model_dump()
-    trend_data = analyze_skills_gap(
-        profile_data["current_skills"], profile_data["target_role"]
-    )
-    try:
-        analysis = generate_reskilling_pathway(profile_data, trend_data)
-    except RuntimeError as exc:
-        status_code = 503 if "OPENAI_API_KEY" in str(exc) else 502
-        raise HTTPException(status_code=status_code, detail=str(exc)) from exc
-    except Exception as exc:
+def _generate_dashboard(intake: UserIntake) -> dict:
+    api_key = os.getenv("GROQ_API_KEY", "").strip()
+    if not api_key:
         raise HTTPException(
-            status_code=502,
-            detail=f"Recommendation generation failed: {exc}",
+            status_code=503,
+            detail="GROQ_API_KEY is not configured. Add it to the backend environment and restart FastAPI.",
+        )
+
+    client = OpenAI(
+        api_key=api_key,
+        base_url="https://api.groq.com/openai/v1",
+    )
+    system_prompt = """You are an elite Future-Ready Workforce Co-Pilot.
+Analyze the user's goal, situation, experience, and current tech stack. Recommend
+ambitious, high-growth, future-ready technology roles that strategically build on
+the user's existing baseline. Include 3 to 5 distinct ranked roles. Scores must be
+integer match estimates from 0 to 100; skill gaps must be concise, actionable
+skills the person should build; demandTrajectory should briefly describe the role's
+expected market direction without inventing precise statistics or citing unsupported
+data. Include one alignment for each UN Sustainable Development Goal 4, 8, and 9:
+4 Quality Education, 8 Decent Work and Economic Growth, and 9 Industry, Innovation
+and Infrastructure. Give each an integer alignment score from 0 to 100 and a brief,
+specific impact description. Return only valid raw JSON, without markdown fences or
+additional text, matching this exact schema:
+{"roles":[{"roleName":"str","matchScore":0,"skillsGap":["str"],"demandTrajectory":"str"}],
+"sdgs":[{"sdgNumber":4,"alignmentScore":0,"impactDescription":"str"}]}.
+Use only SDG numbers 4, 8, and 9, and include each of those three goals."""
+    user_message = "Career intake profile:\n" + intake.model_dump_json(indent=2)
+
+    try:
+        response = client.chat.completions.create(
+            model="openai/gpt-oss-20b",
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_message},
+            ],
+            response_format={"type": "json_object"},
+        )
+        content = response.choices[0].message.content
+        if not content:
+            raise ValueError("Groq returned an empty response.")
+        data = json.loads(content)
+        DashboardResponse.model_validate(data)
+    except Exception as exc:
+        print(f"Groq recommendation request failed: {exc!r}", flush=True)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Groq request failed: {exc}",
         ) from exc
-    return {"trends": trend_data, "analysis": analysis}
+    return data
+
+
+@app.post("/api/recommendation", response_model=DashboardResponse)
+async def get_recommendation(intake: UserIntake) -> DashboardResponse:
+    """Generate ranked role and UN SDG recommendations from onboarding intake."""
+    return await run_in_threadpool(_generate_dashboard, intake)
 
 
 @app.post("/api/resume/parse")
 async def parse_uploaded_resume(
     request: Request,
     file: UploadFile | None = File(default=None),
-) -> dict:
-    """Parse an optional resume, or generate a dashboard from a JSON profile."""
+) -> dict | DashboardResponse:
+    """Parse an optional resume, or accept a JSON intake profile as fallback."""
     if file is not None:
         filename = file.filename or ""
         if not filename.lower().endswith((".pdf", ".docx")):
             raise HTTPException(status_code=415, detail="Upload a PDF or DOCX resume.")
-
         content = await file.read(10 * 1024 * 1024 + 1)
         if len(content) > 10 * 1024 * 1024:
             raise HTTPException(status_code=413, detail="Resume must be 10 MB or smaller.")
@@ -87,29 +164,10 @@ async def parse_uploaded_resume(
         except json.JSONDecodeError as exc:
             raise HTTPException(status_code=400, detail="profile_data must contain valid JSON.") from exc
     else:
-        raise HTTPException(
-            status_code=415,
-            detail="Send a PDF/DOCX multipart upload or a JSON profile.",
-        )
+        raise HTTPException(status_code=415, detail="Send a PDF/DOCX upload or a JSON intake profile.")
 
-    if not isinstance(payload, dict):
-        raise HTTPException(status_code=422, detail="The profile payload must be a JSON object.")
     try:
-        profile = UserProfile.model_validate(payload)
-    except ValidationError as exc:
-        raise HTTPException(status_code=422, detail=exc.errors()) from exc
-
-    # A skipped resume still produces the same full trends and recommendation payload.
-    return await run_in_threadpool(_build_recommendation, profile)
-
-
-@app.post("/api/trends")
-def get_trends(profile: UserProfile) -> dict:
-    """Analyze the supplied profile against the bundled trend dataset."""
-    return analyze_skills_gap(profile.current_skills, profile.target_role)
-
-
-@app.post("/api/recommendation")
-def get_recommendation(profile: UserProfile) -> dict:
-    """Return trend evidence and an AI-generated reskilling recommendation."""
-    return _build_recommendation(profile)
+        intake = UserIntake.model_validate(payload)
+    except Exception as exc:
+        raise HTTPException(status_code=422, detail="The intake profile does not match the expected fields.") from exc
+    return await run_in_threadpool(_generate_dashboard, intake)

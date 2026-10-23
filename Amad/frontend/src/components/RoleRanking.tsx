@@ -1,28 +1,15 @@
-export interface RankedRole {
-  role: string;
-  match_score: number;
-  skills_gap?: string[];
-  demand_status: string;
-  demand_change_pct?: string;
-  reason?: string;
+export interface RoleMatch {
+  roleName: string;
+  matchScore: number;
+  skillsGap: string[];
+  demandTrajectory: string;
 }
 
 interface RoleRankingProps {
-  roles: RankedRole[];
+  roles: RoleMatch[];
   selectedRole: string;
   loading?: boolean;
-  onSelectRole: (role: RankedRole) => void;
-}
-
-function demandBadge(status: string) {
-  const normalized = status.toLowerCase();
-  if (normalized === "rising" || normalized === "emerging") {
-    return "border-emerald-400/20 bg-emerald-400/10 text-emerald-200";
-  }
-  if (normalized === "declining") {
-    return "border-rose-400/20 bg-rose-400/10 text-rose-200";
-  }
-  return "border-slate-700 bg-slate-800 text-slate-300";
+  onSelectRole: (role: RoleMatch) => void;
 }
 
 export default function RoleRanking({
@@ -32,87 +19,53 @@ export default function RoleRanking({
   onSelectRole,
 }: RoleRankingProps) {
   return (
-    <section className="rounded-2xl border border-slate-800 bg-slate-900 p-6 shadow-xl sm:p-8" aria-labelledby="role-ranking-heading">
+    <section className="rounded-2xl border border-gray-800 bg-gray-950 p-6 shadow-xl sm:p-8" aria-labelledby="role-ranking-heading">
       <div className="mb-5">
         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-rose-300">Explore your options</p>
         <h2 id="role-ranking-heading" className="mt-1 text-xl font-semibold text-white">Ranked future roles</h2>
-        <p className="mt-2 text-sm text-slate-400">Select a role to refresh its pathway and market signals.</p>
+        <p className="mt-2 text-sm text-gray-400">Scores reflect how closely each path fits your current profile.</p>
       </div>
 
       {loading ? (
         <div className="space-y-3" aria-live="polite" aria-busy="true">
-          {[0, 1].map((item) => (
-            <div key={item} className="h-28 animate-pulse rounded-xl border border-slate-800 bg-slate-950/70" />
-          ))}
-          <span className="sr-only">Updating role rankings</span>
+          {[0, 1, 2].map((item) => <div key={item} className="h-32 animate-pulse rounded-xl border border-gray-800 bg-black/70" />)}
+          <span className="sr-only">Generating role rankings</span>
         </div>
       ) : roles.length > 0 ? (
         <ol className="space-y-3">
           {roles.map((role, index) => {
-            const score = Math.max(0, Math.min(100, Number(role.match_score) || 0));
-            const selected = role.role.toLowerCase() === selectedRole.toLowerCase();
-            const hasGap = (role.skills_gap?.length ?? 0) > 0;
+            const score = Math.max(0, Math.min(100, Number(role.matchScore) || 0));
+            const selected = role.roleName === selectedRole;
             return (
-              <li key={`${role.role}-${index}`}>
+              <li key={`${role.roleName}-${index}`}>
                 <button
                   type="button"
                   aria-pressed={selected}
                   onClick={() => onSelectRole(role)}
-                  className={`w-full rounded-xl border p-4 text-left transition hover:-translate-y-0.5 hover:border-rose-500/40 focus:outline-none focus:ring-2 focus:ring-rose-500 ${
-                    selected ? "border-rose-500/50 bg-rose-500/5" : "border-slate-800 bg-slate-950/60"
-                  }`}
+                  className={`w-full rounded-xl border p-4 text-left transition hover:-translate-y-0.5 hover:border-rose-500/40 focus:outline-none focus:ring-2 focus:ring-rose-500 ${selected ? "border-rose-500/50 bg-rose-500/5" : "border-gray-800 bg-black/60"}`}
                 >
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div>
-                      <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">#{index + 1} match</p>
-                      <h3 className="mt-1 font-semibold text-white">{role.role}</h3>
+                      <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">#{index + 1} match</p>
+                      <h3 className="mt-1 font-semibold text-white">{role.roleName}</h3>
                     </div>
-                    <span className="rounded-full border border-rose-400/20 bg-rose-400/10 px-2.5 py-1 text-xs font-semibold text-rose-200">
-                      {score}% match
-                    </span>
+                    <span className="rounded-full border border-rose-400/20 bg-rose-400/10 px-2.5 py-1 text-xs font-semibold text-rose-200">{score}% match</span>
                   </div>
-
-                  <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-slate-800">
+                  <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-gray-800">
                     <div className="h-full rounded-full bg-gradient-to-r from-rose-600 to-pink-300 transition-[width] duration-500" style={{ width: `${score}%` }} />
                   </div>
-
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    <span className={`rounded-full border px-2.5 py-1 text-xs ${demandBadge(role.demand_status)}`}>
-                      {role.demand_status === "Unavailable" ? "Demand data unavailable" : `${role.demand_status} demand`}
-                      {role.demand_change_pct ? ` · ${role.demand_change_pct}` : ""}
-                    </span>
-                    {hasGap && (
-                      <span className="rounded-full border border-amber-400/20 bg-amber-400/10 px-2.5 py-1 text-xs text-amber-200">
-                        Reskilling required
-                      </span>
-                    )}
-                    {!hasGap && role.skills_gap && (
-                      <span className="rounded-full border border-emerald-400/20 bg-emerald-400/10 px-2.5 py-1 text-xs text-emerald-200">
-                        No listed skill gaps
-                      </span>
-                    )}
-                    {!role.skills_gap && (
-                      <span className="rounded-full border border-slate-700 bg-slate-800 px-2.5 py-1 text-xs text-slate-300">
-                        Gap data unavailable
-                      </span>
-                    )}
+                  <div className="mt-3 flex flex-wrap items-center gap-2">
+                    <span className="rounded-full border border-emerald-400/20 bg-emerald-400/10 px-2.5 py-1 text-xs text-emerald-200">{role.demandTrajectory}</span>
+                    {role.skillsGap.length > 0 && <span className="rounded-full border border-amber-400/20 bg-amber-400/10 px-2.5 py-1 text-xs text-amber-200">Reskilling required</span>}
                   </div>
-
-                  {(role.skills_gap?.length ?? 0) > 0 && (
-                    <p className="mt-3 text-xs leading-5 text-slate-400">
-                      Skills to build: {role.skills_gap?.join(", ")}
-                    </p>
-                  )}
-                  {role.reason && <p className="mt-2 text-xs leading-5 text-slate-400">{role.reason}</p>}
+                  {role.skillsGap.length > 0 && <p className="mt-3 text-xs leading-5 text-gray-400">Skills to build: {role.skillsGap.join(", ")}</p>}
                 </button>
               </li>
             );
           })}
         </ol>
       ) : (
-        <div className="rounded-xl border border-dashed border-slate-800 bg-slate-950/50 p-6 text-center text-sm text-slate-400">
-          Analyze a profile to see ranked role matches.
-        </div>
+        <div className="rounded-xl border border-dashed border-gray-800 bg-black/50 p-6 text-center text-sm text-gray-400">No role matches were returned. Please submit your profile again.</div>
       )}
     </section>
   );
