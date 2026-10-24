@@ -1,0 +1,11 @@
+﻿modules = ["python-3.13", "nodejs-20"]
+run = "bash start_replit.sh"
+entrypoint = "frontend/src/app/page.tsx"
+
+[[ports]]
+localPort = 3000
+externalPort = 80
+
+[[ports]]
+localPort = 8000
+externalPort = 8000
