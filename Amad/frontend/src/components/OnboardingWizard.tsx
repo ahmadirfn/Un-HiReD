@@ -17,6 +17,7 @@ export interface OnboardingProfile {
 export interface BaseProfile extends OnboardingProfile {
   current_role: string;
   current_skills: string[];
+  resume_extracted_skills: string[];
   years_experience: number;
   target_role: string;
   hasUploadedCV: boolean;
@@ -26,6 +27,8 @@ export interface BaseProfile extends OnboardingProfile {
 
 interface ParsedResume {
   current_role?: string;
+  extracted_skills?: string[];
+  suggested_roles?: string[];
   current_skills?: string[];
   years_experience?: number;
   detail?: string;
@@ -283,10 +286,11 @@ export default function OnboardingWizard({
       .split(",")
       .map((skill) => skill.trim())
       .filter(Boolean);
+    const resumeExtractedSkills = parsed.extracted_skills ?? parsed.current_skills ?? [];
     const allSkills = [
       ...selectedSkills,
       ...extraSkills,
-      ...(parsed.current_skills ?? []),
+      ...resumeExtractedSkills,
     ].filter((skill, index, skills) =>
       skills.findIndex((candidate) => candidate.toLowerCase() === skill.toLowerCase()) === index,
     );
@@ -297,6 +301,7 @@ export default function OnboardingWizard({
       experience_level: experienceLevel,
       current_role: currentRole.trim() || parsed.current_role || situation,
       current_skills: allSkills,
+      resume_extracted_skills: resumeExtractedSkills,
       years_experience: parsed.years_experience ?? yearsExperience,
       target_role: targetRole,
       hasUploadedCV: Boolean(resumeFile && !skipResume),
@@ -600,9 +605,9 @@ export default function OnboardingWizard({
               <section className="rounded-2xl border border-gray-800 bg-black/50 p-4">
                 <h3 className="font-semibold text-white">Skills Identified</h3>
                 <div className="mt-3 flex flex-wrap gap-2">
-                  {pendingProfile.current_skills.length > 0 ? pendingProfile.current_skills.map((skill) => (
+                  {pendingProfile.resume_extracted_skills.length > 0 ? pendingProfile.resume_extracted_skills.map((skill) => (
                     <span key={skill} className="rounded-full border border-rose-400/20 bg-rose-400/10 px-3 py-1.5 text-xs text-rose-100">{skill}</span>
-                  )) : <p className="text-sm text-gray-400">No specific skills were extracted. Your selected toolkit will still be used.</p>}
+                  )) : <p className="text-sm text-gray-400">No listed skills were explicitly found in the resume text. Your manually selected toolkit will still inform recommendations.</p>}
                 </div>
               </section>
               <section className="rounded-2xl border border-gray-800 bg-black/50 p-4">

@@ -152,13 +152,15 @@ async def get_recommendation(intake: UserIntake) -> DashboardResponse:
 async def parse_uploaded_resume(
     request: Request,
     file: UploadFile | None = File(default=None),
+    resume: UploadFile | None = File(default=None),
 ) -> dict | DashboardResponse:
     """Parse an optional resume, or accept a JSON intake profile as fallback."""
-    if file is not None:
-        filename = file.filename or ""
+    target_file = file or resume
+    if target_file is not None:
+        filename = target_file.filename or ""
         if not filename.lower().endswith((".pdf", ".docx")):
             raise HTTPException(status_code=415, detail="Upload a PDF or DOCX resume.")
-        content = await file.read(10 * 1024 * 1024 + 1)
+        content = await target_file.read(10 * 1024 * 1024 + 1)
         if len(content) > 10 * 1024 * 1024:
             raise HTTPException(status_code=413, detail="Resume must be 10 MB or smaller.")
         try:
@@ -166,9 +168,13 @@ async def parse_uploaded_resume(
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
         except Exception as exc:
+            print(
+                f"Resume parsing failed for {filename!r}: {type(exc).__name__}: {exc}",
+                flush=True,
+            )
             raise HTTPException(
                 status_code=422,
-                detail="Could not read this resume. Check that the file is a valid PDF or DOCX.",
+                detail=f"Could not read this resume ({type(exc).__name__}): {exc}",
             ) from exc
 
     content_type = request.headers.get("content-type", "")
@@ -182,8 +188,8 @@ async def parse_uploaded_resume(
         raw_profile = form.get("profile_data")
         if not isinstance(raw_profile, str):
             raise HTTPException(
-                status_code=400,
-                detail="When no resume is uploaded, include profile_data as a JSON form field.",
+                status_code=422,
+                detail="No resume file was provided in the upload form. Send it as 'file' or 'resume'.",
             )
         try:
             payload = json.loads(raw_profile)

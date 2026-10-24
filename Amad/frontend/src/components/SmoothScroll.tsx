@@ -5,15 +5,34 @@ import { useEffect, type ReactNode } from "react";
 
 export default function SmoothScroll({ children }: { children: ReactNode }) {
   useEffect(() => {
-    // Lenis v1 enables smooth scrolling by default; its typed options do not include `smooth`.
-    const lenis = new Lenis({
+    let lenis: Lenis | null = null;
+    let activeWrapper: HTMLElement | null = null;
+
+    const options = {
       duration: 1.2,
-      easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
-    });
+      easing: (t: number) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+    };
+
+    // The onboarding page scrolls the document. The career workspace uses its
+    // own scroll pane, so point Lenis at that pane while it is mounted.
+    const syncScrollTarget = () => {
+      const wrapper = document.querySelector<HTMLElement>("[data-lenis-wrapper]");
+      if (wrapper === activeWrapper && lenis) return;
+
+      lenis?.destroy();
+      activeWrapper = wrapper;
+      lenis = wrapper
+        ? new Lenis({ ...options, wrapper, content: wrapper.querySelector<HTMLElement>("[data-lenis-content]") ?? wrapper })
+        : new Lenis(options);
+    };
+
+    syncScrollTarget();
+    const observer = new MutationObserver(syncScrollTarget);
+    observer.observe(document.body, { childList: true, subtree: true });
 
     let animationFrame = 0;
     const raf = (time: number) => {
-      lenis.raf(time);
+      lenis?.raf(time);
       animationFrame = window.requestAnimationFrame(raf);
     };
 
@@ -21,7 +40,8 @@ export default function SmoothScroll({ children }: { children: ReactNode }) {
 
     return () => {
       window.cancelAnimationFrame(animationFrame);
-      lenis.destroy();
+      observer.disconnect();
+      lenis?.destroy();
     };
   }, []);
 

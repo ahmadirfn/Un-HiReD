@@ -1,3 +1,5 @@
+import MagneticButton from "./MagneticButton";
+
 export interface LearningResource {
   platform: string;
   title: string;
@@ -45,6 +47,7 @@ export default function RoleRanking({
             const selected = role.roleName === selectedRole;
             return (
               <li key={`${role.roleName}-${index}`}>
+                <MagneticButton className="w-full" strength={0.035}>
                 <button
                   type="button"
                   aria-pressed={selected}
@@ -76,6 +79,7 @@ export default function RoleRanking({
                   </div>
                   {role.skillsGap.length > 0 && <p className="mt-3 text-xs leading-5 text-gray-600 dark:text-gray-400">Skills to build: {role.skillsGap.join(", ")}</p>}
                 </button>
+                </MagneticButton>
               </li>
             );
           })}

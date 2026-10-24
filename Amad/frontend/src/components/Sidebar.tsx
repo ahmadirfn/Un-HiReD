@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { CircleHelp, Home, LogOut, Moon, Sun } from "lucide-react";
+import { motion } from "framer-motion";
+import { CircleHelp, Home, LogOut, Moon, PanelLeftClose, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
 
 export type WorkspaceSection = "profile" | "cv" | "matches" | "pathway" | "impact";
@@ -12,6 +13,8 @@ interface SidebarProps {
   userName: string;
   onNavigate: (section: WorkspaceSection) => void;
   onLogout: () => void;
+  isOpen: boolean;
+  onToggle: () => void;
 }
 
 const PROFILE_ITEMS: { id: WorkspaceSection; label: string }[] = [
@@ -30,6 +33,8 @@ export default function Sidebar({
   userName,
   onNavigate,
   onLogout,
+  isOpen,
+  onToggle,
 }: SidebarProps) {
   const [mounted, setMounted] = useState(false);
   const { resolvedTheme, setTheme, theme } = useTheme();
@@ -42,8 +47,22 @@ export default function Sidebar({
 
   return (
     <>
-      <aside className="fixed inset-y-0 left-0 z-40 hidden w-64 flex-col border-r border-slate-200/80 bg-slate-50 px-4 py-6 dark:border-slate-800 dark:bg-[#161b22] lg:flex">
-        <Brand onClick={() => onNavigate("matches")} />
+      <motion.aside
+        initial={false}
+        animate={{ width: isOpen ? 260 : 0, opacity: isOpen ? 1 : 0 }}
+        transition={{ duration: 0.28, ease: "easeInOut" }}
+        aria-hidden={!isOpen}
+        inert={!isOpen}
+        style={{ pointerEvents: isOpen ? "auto" : "none" }}
+        className={`relative z-40 hidden h-screen shrink-0 flex-col overflow-hidden border-r bg-slate-50 dark:bg-[#161b22] lg:flex ${isOpen ? "border-slate-200/80 dark:border-slate-800" : "border-transparent"}`}
+      >
+        <div className="flex h-full w-64 flex-col px-4 py-6">
+        <div className="flex items-center justify-between gap-2">
+          <Brand onClick={() => onNavigate("matches")} />
+          <button type="button" onClick={onToggle} aria-label="Collapse sidebar" title="Collapse sidebar" className="grid h-9 w-9 shrink-0 place-items-center rounded-lg text-slate-500 transition hover:bg-slate-200 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-rose-500 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white">
+            <PanelLeftClose aria-hidden="true" className="h-4 w-4" />
+          </button>
+        </div>
 
         <nav className="mt-10 flex-1 space-y-8" aria-label="Workspace navigation">
           <NavigationGroup title="MY PROFILE" items={profileItems} activeSection={activeSection} onNavigate={onNavigate} />
@@ -59,7 +78,8 @@ export default function Sidebar({
           theme={theme}
           setTheme={setTheme}
         />
-      </aside>
+        </div>
+      </motion.aside>
 
       <div className="sticky top-0 z-40 border-b border-slate-200/80 bg-slate-50/95 px-4 py-3 backdrop-blur dark:border-slate-800 dark:bg-[#161b22]/95 lg:hidden">
         <div className="flex items-center justify-between gap-3">
@@ -202,7 +222,7 @@ function Brand({ onClick, compact = false }: BrandProps) {
 
 function Avatar({ name }: { name: string }) {
   const initial = name.trim().charAt(0).toUpperCase() || "U";
-  return <span aria-hidden="true" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-rose-400/20 bg-rose-500/10 text-sm font-semibold text-rose-200">{initial}</span>;
+  return <span aria-hidden="true" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-rose-200 bg-rose-50 text-sm font-semibold text-rose-800 dark:border-rose-400/20 dark:bg-rose-500/10 dark:text-rose-200">{initial}</span>;
 }
 
 function ThemeToggle({

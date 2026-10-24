@@ -1,7 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { Command as CommandIcon, PanelLeftOpen, Search } from "lucide-react";
 import OnboardingWizard, { type BaseProfile } from "../components/OnboardingWizard";
+import CommandPalette, { type DashboardCommand } from "../components/CommandPalette";
+import MagneticButton from "../components/MagneticButton";
 import RoleRanking, { type RoleMatch } from "../components/RoleRanking";
 import SdgMapping, { type SdgAlignment } from "../components/SdgMapping";
 import Sidebar, { type WorkspaceSection } from "../components/Sidebar";
@@ -27,6 +30,8 @@ export default function Home() {
   const [results, setResults] = useState<RecommendationResponse | null>(null);
   const [error, setError] = useState("");
   const [activeSection, setActiveSection] = useState<WorkspaceSection>("matches");
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [commandMessage, setCommandMessage] = useState("");
   const [selectedRole, setSelectedRole] = useState("");
   const dashboardRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -113,6 +118,24 @@ export default function Home() {
     window.location.href = "/";
   }
 
+  function handleCommand(command: DashboardCommand) {
+    setCommandMessage("");
+    if (command === "optimize-resume") {
+      if (hasUploadedCV) setActiveSection("cv");
+      else {
+        setActiveSection("profile");
+        setCommandMessage("Upload a resume to open your CV workspace.");
+      }
+    } else if (command === "analyze-skill-gaps") {
+      setActiveSection("pathway");
+    } else {
+      setActiveSection("matches");
+      setCommandMessage("Mock interview generation is not connected yet.");
+    }
+
+    window.setTimeout(() => setCommandMessage(""), 4000);
+  }
+
   const selectedRoleMatch = results?.roles.find((role) => role.roleName === selectedRole) ?? results?.roles[0];
   const sectionTitle = SECTION_TITLES[activeSection];
 
@@ -124,16 +147,29 @@ export default function Home() {
           {error && <div role="alert" className="mx-auto mt-5 max-w-2xl rounded-xl border border-rose-900/70 bg-rose-950/40 p-4 text-sm text-rose-200">{error}</div>}
         </div>
       ) : (
-        <div ref={dashboardRef} className="min-h-screen lg:pl-64">
+        <div ref={dashboardRef} className="flex min-h-screen flex-col lg:h-screen lg:flex-row">
+          <CommandPalette onCommand={handleCommand} />
           <Sidebar
             activeSection={activeSection}
             hasUploadedCV={hasUploadedCV}
             userName={profile?.first_name ?? ""}
             onNavigate={setActiveSection}
             onLogout={handleLogout}
+            isOpen={isSidebarOpen}
+            onToggle={() => setIsSidebarOpen(false)}
           />
 
-          <div className="flex min-h-screen flex-col">
+          {!isSidebarOpen && <button
+            type="button"
+            onClick={() => setIsSidebarOpen(true)}
+            aria-label="Expand sidebar"
+            title="Open sidebar"
+            aria-expanded={false}
+            className="fixed left-4 top-4 z-[60] grid h-10 w-10 place-items-center rounded-xl border border-slate-200 bg-white/95 text-slate-700 shadow-lg shadow-black/10 backdrop-blur transition hover:bg-slate-100 hover:text-slate-950 focus:outline-none focus:ring-2 focus:ring-rose-500 dark:border-slate-700 dark:bg-[#161b22]/95 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white"
+          ><PanelLeftOpen aria-hidden="true" className="h-4 w-4" /></button>}
+
+          <div data-lenis-wrapper className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain lg:h-screen">
+            <div data-lenis-content className="flex min-h-full flex-col">
             <header className="border-b border-slate-200/80 px-5 py-6 dark:border-slate-800 sm:px-8 lg:px-10">
               <div className="mx-auto flex max-w-6xl flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
                 <div>
@@ -141,9 +177,20 @@ export default function Home() {
                   <h1 className="mt-1 text-2xl font-semibold text-gray-900 dark:text-white sm:text-3xl">{sectionTitle.title}</h1>
                   <p className="mt-2 text-sm text-slate-600 dark:text-gray-400">{sectionTitle.description}</p>
                 </div>
-                {profile?.target_role && <p className="text-sm text-slate-600 dark:text-gray-400">Goal: <span className="font-medium text-slate-900 dark:text-gray-200">{profile.target_role}</span></p>}
+                <div className="flex flex-wrap items-center gap-3">
+                  {profile?.target_role && <p className="text-sm text-slate-600 dark:text-gray-400">Goal: <span className="font-medium text-slate-900 dark:text-gray-200">{profile.target_role}</span></p>}
+                  <MagneticButton strength={0.035}>
+                  <button type="button" onClick={() => window.dispatchEvent(new Event("unhired:open-command-palette"))} className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-700 shadow-sm transition hover:border-rose-300 hover:text-rose-800 focus:outline-none focus:ring-2 focus:ring-rose-500 dark:border-slate-800 dark:bg-[#161b22] dark:text-slate-300 dark:hover:border-rose-400/40 dark:hover:text-white">
+                    <Search className="h-3.5 w-3.5" aria-hidden="true" />
+                    <span>Commands</span>
+                    <kbd className="ml-1 inline-flex items-center gap-0.5 rounded border border-slate-200 px-1.5 py-0.5 text-[10px] text-slate-500 dark:border-slate-700 dark:text-slate-400"><CommandIcon className="h-2.5 w-2.5" />K</kbd>
+                  </button>
+                  </MagneticButton>
+                </div>
               </div>
             </header>
+
+            {commandMessage && <div role="status" className="fixed bottom-5 right-5 z-[70] max-w-sm rounded-xl border border-rose-200 bg-white px-4 py-3 text-sm text-slate-800 shadow-xl dark:border-rose-400/20 dark:bg-[#161b22] dark:text-slate-200">{commandMessage}</div>}
 
             {error && <div role="alert" className="mx-5 mt-5 rounded-xl border border-rose-900/70 bg-rose-950/40 p-4 text-sm text-rose-200 sm:mx-8 lg:mx-10">{error}</div>}
 
@@ -170,6 +217,7 @@ export default function Home() {
               {" "}and{" "}
               <a href="https://open.dosm.gov.my/dashboard/labour-market" target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 transition hover:text-pink-400">DOSM Labour Market Data</a>.
             </footer>
+            </div>
           </div>
         </div>
       )}
@@ -224,8 +272,8 @@ function CvOverview({ profile, roles }: { profile: BaseProfile; roles: RoleMatch
         <div className="space-y-5">
           <section className="rounded-2xl border border-slate-200/80 bg-white p-5 dark:border-slate-800 dark:bg-[#161b22]">
             <h3 className="font-semibold text-slate-900 dark:text-white">Extracted Skills</h3>
-            <p className="mt-1 text-sm text-slate-600 dark:text-gray-400">Skills identified from your profile and resume.</p>
-            <SkillChips skills={profile.current_skills} emptyText="No skills were extracted from the uploaded CV." />
+            <p className="mt-1 text-sm text-slate-600 dark:text-gray-400">Only skills explicitly found in the resume text are listed here. Your selected toolkit is used separately for recommendations.</p>
+            <SkillChips skills={profile.resume_extracted_skills} emptyText="No listed skills were explicitly found in the uploaded CV." />
           </section>
           <section className="rounded-2xl border border-slate-200/80 bg-white p-5 dark:border-slate-800 dark:bg-[#161b22]">
             <h3 className="font-semibold text-slate-900 dark:text-white">Future Potentials</h3>
@@ -298,6 +346,6 @@ function LearningPathway({ role }: { role: RoleMatch }) {
 
 function SkillChips({ skills, emptyText }: { skills: string[]; emptyText: string }) {
   return skills.length > 0 ? (
-    <ul className="mt-3 flex flex-wrap gap-2">{skills.map((skill) => <li key={skill} className="rounded-full border border-rose-400/20 bg-rose-400/10 px-3 py-1.5 text-xs text-rose-100">{skill}</li>)}</ul>
+    <ul className="mt-3 flex flex-wrap gap-2">{skills.map((skill) => <li key={skill} className="rounded-full border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-medium text-rose-900 dark:border-rose-400/20 dark:bg-rose-400/10 dark:text-rose-100">{skill}</li>)}</ul>
   ) : <p className="mt-3 text-sm text-gray-500">{emptyText}</p>;
 }

@@ -10,6 +10,8 @@
   },
   "dependencies": {
     "@studio-freight/lenis": "^1.0.42",
+    "cmdk": "^1.1.1",
+    "framer-motion": "^14.6.0",
     "lucide-react": "^1.61.0",
     "next": "16.4.2",
     "next-themes": "^0.4.6",
