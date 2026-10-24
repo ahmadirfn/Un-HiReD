@@ -1,18 +1,8 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
 import SmoothScroll from "../components/SmoothScroll";
 import ThemeProvider from "../components/ThemeProvider";
+import { LanguageProvider } from "../store/languageStore";
 import "./globals.css";
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
 
 export const metadata: Metadata = {
   title: "Un-HiReD | AI Career Co-Pilot",
@@ -23,10 +13,12 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" className="h-full" suppressHydrationWarning>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} min-h-screen bg-white text-gray-900 antialiased dark:bg-[#0f1117] dark:text-white`}
+        className="min-h-screen bg-[#f2f4f7] font-sans text-gray-900 antialiased dark:bg-[#0f1117] dark:text-white"
       >
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-          <SmoothScroll>{children}</SmoothScroll>
+          <LanguageProvider>
+            <SmoothScroll>{children}</SmoothScroll>
+          </LanguageProvider>
         </ThemeProvider>
       </body>
     </html>

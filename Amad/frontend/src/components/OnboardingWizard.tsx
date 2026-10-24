@@ -6,6 +6,7 @@ import {
   useState,
   type DragEvent,
 } from "react";
+import { saveResumeFile } from "../lib/resumeStorage";
 
 export interface OnboardingProfile {
   first_name: string;
@@ -18,6 +19,7 @@ export interface BaseProfile extends OnboardingProfile {
   current_role: string;
   current_skills: string[];
   resume_extracted_skills: string[];
+  resume_text: string;
   years_experience: number;
   target_role: string;
   hasUploadedCV: boolean;
@@ -31,6 +33,7 @@ interface ParsedResume {
   suggested_roles?: string[];
   current_skills?: string[];
   years_experience?: number;
+  extracted_text?: string;
   detail?: string;
 }
 
@@ -271,6 +274,13 @@ export default function OnboardingWizard({
           throw new Error(message);
         }
         parsed = (await response.json()) as ParsedResume;
+        // Save the original file locally so its preview can be restored after
+        // a reload. Parsing should still succeed if browser storage is blocked.
+        try {
+          await saveResumeFile(resumeFile);
+        } catch {
+          // The extracted text and skills are already available in `parsed`.
+        }
       } catch (requestError) {
         setParsingResume(false);
         setError(
@@ -302,6 +312,7 @@ export default function OnboardingWizard({
       current_role: currentRole.trim() || parsed.current_role || situation,
       current_skills: allSkills,
       resume_extracted_skills: resumeExtractedSkills,
+      resume_text: parsed.extracted_text ?? "",
       years_experience: parsed.years_experience ?? yearsExperience,
       target_role: targetRole,
       hasUploadedCV: Boolean(resumeFile && !skipResume),

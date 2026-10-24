@@ -14,6 +14,10 @@ export default function MagneticButton({
   className = "",
   strength = 0.12,
 }: MagneticButtonProps) {
+  return <MagneticMotion className={className} strength={strength}>{children}</MagneticMotion>;
+}
+
+function MagneticMotion({ children, className = "", strength = 0.12 }: MagneticButtonProps) {
   const elementRef = useRef<HTMLDivElement>(null);
   const x = useMotionValue(0);
   const y = useMotionValue(0);

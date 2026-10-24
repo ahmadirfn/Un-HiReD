@@ -20,4 +20,7 @@ if ($LASTEXITCODE -ne 0) {
     }
 }
 
-& $python -m uvicorn main:app --reload
+# Avoid Uvicorn's Windows reload subprocess here: it can leave a stale listener
+# on port 8000 if the reloader cannot create its IPC pipe. Restart this command
+# after backend code changes.
+& $python -m uvicorn main:app --host 127.0.0.1 --port 8000

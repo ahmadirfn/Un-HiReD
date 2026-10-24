@@ -1,9 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import { useLanguage } from "../store/languageStore";
 
 export interface ResilienceScenario {
   scenario: string;
+  label?: "Estimates";
   resilience_score: number;
   rationale: string;
 }
@@ -23,9 +25,10 @@ export default function UncertaintyScenario({
   scenarios,
   loading = false,
 }: UncertaintyScenarioProps) {
+  const { t } = useLanguage();
   const [severity, setSeverity] = useState(38);
   const scenarioIndex = severity < 34 ? 0 : severity < 68 ? 1 : 2;
-  const selectedScenario = SCENARIO_LABELS[scenarioIndex];
+  const selectedScenario = t(SCENARIO_LABELS[scenarioIndex]);
   const reference = scenarios[scenarioIndex] ?? scenarios[0];
   const baseline = reference
     ? clamp(reference.resilience_score)
@@ -37,9 +40,9 @@ export default function UncertaintyScenario({
   return (
     <section className="rounded-2xl border border-gray-800 bg-gray-950 p-6 shadow-xl sm:p-8" aria-labelledby="scenario-heading">
       <div className="mb-7">
-        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-rose-300">Stress-test your pathway</p>
-        <h2 id="scenario-heading" className="mt-1 text-xl font-semibold text-white">Future market scenarios</h2>
-        <p className="mt-2 text-sm text-gray-400">Adjust disruption severity to see how your pathway may hold up under changing market conditions.</p>
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-rose-600 dark:text-rose-300">{t("Stress-test your pathway")}</p>
+        <h2 id="scenario-heading" className="mt-1 text-xl font-semibold text-slate-950 dark:text-white">{t("Future market scenarios")}</h2>
+        <p className="mt-2 text-sm text-slate-700 dark:text-gray-300">{t("Adjust disruption severity to see how your pathway may hold up under changing market conditions.")}</p>
       </div>
 
       {loading ? (
@@ -49,16 +52,17 @@ export default function UncertaintyScenario({
           <div className="rounded-xl border border-gray-800 bg-black/60 p-5 sm:p-6">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
-                <p className="text-sm text-gray-400">Selected scenario</p>
-                <h3 className="mt-1 text-lg font-semibold text-white">{selectedScenario}</h3>
+                <p className="text-sm text-slate-700 dark:text-gray-300">{t("Selected scenario")}</p>
+                <h3 className="mt-1 text-lg font-semibold text-slate-950 dark:text-white">{reference?.scenario ?? selectedScenario}</h3>
               </div>
               <span className="rounded-full border border-rose-400/20 bg-rose-400/10 px-3 py-1 text-xs font-semibold text-rose-200">
                 {severityLabel} disruption · {severity}%
               </span>
             </div>
+            <p className="mt-3 text-xs font-semibold uppercase tracking-wider text-amber-700 dark:text-amber-300">{t(reference?.label ?? "Estimates")}</p>
 
-            <label htmlFor="disruption-severity" className="mt-7 block text-sm font-medium text-gray-300">
-              Market disruption severity
+            <label htmlFor="disruption-severity" className="mt-7 block text-sm font-medium text-slate-800 dark:text-gray-300">
+              {t("Market disruption severity")}
             </label>
             <input
               id="disruption-severity"
@@ -71,11 +75,11 @@ export default function UncertaintyScenario({
               className="mt-3 h-2 w-full cursor-pointer appearance-none rounded-full bg-gray-800 accent-rose-400 focus:outline-none focus:ring-2 focus:ring-rose-400/50"
               aria-valuetext={`${severityLabel} disruption, ${severity} percent`}
             />
-            <div className="mt-2 flex justify-between text-xs text-gray-500"><span>Lower</span><span>Higher</span></div>
+            <div className="mt-2 flex justify-between text-xs text-slate-600 dark:text-gray-400"><span>{t("Lower")}</span><span>{t("Higher")}</span></div>
 
             <div className="mt-7 grid gap-4 sm:grid-cols-2">
-              <Metric label="Pathway resilience" value={resilience} />
-              <Metric label="Estimated job stability" value={stability} />
+              <Metric label={t("Pathway resilience")} value={resilience} />
+              <Metric label={t("Estimated job stability")} value={stability} />
             </div>
             <p className="mt-5 text-sm leading-6 text-gray-400">
               {reference?.rationale ?? "Illustrative estimates show how adaptable skills and continuous learning can support career resilience as market conditions shift."}
@@ -83,7 +87,7 @@ export default function UncertaintyScenario({
           </div>
 
           <div className="mt-4 grid gap-3 sm:grid-cols-3">
-            {SCENARIO_LABELS.map((label, index) => (
+                {SCENARIO_LABELS.map((label, index) => (
               <button
                 key={label}
                 type="button"
@@ -91,7 +95,7 @@ export default function UncertaintyScenario({
                 aria-pressed={scenarioIndex === index}
                 className={`rounded-xl border px-4 py-3 text-left text-sm transition ${scenarioIndex === index ? "border-rose-400/50 bg-rose-500/10 text-rose-100" : "border-gray-800 bg-gray-900/60 text-gray-400 hover:border-gray-600 hover:text-gray-200"}`}
               >
-                {label}
+                {t(label)}
               </button>
             ))}
           </div>

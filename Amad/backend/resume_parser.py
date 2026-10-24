@@ -143,6 +143,9 @@ def parse_resume(filename: str, content: bytes) -> dict:
         "suggested_roles": [],
         "current_skills": skills,
         "years_experience": int(experience_match.group(1)) if experience_match else 0,
+        # Keep this bounded so the parsed profile can safely travel in the
+        # browser session and be supplied to the resume-tailoring tool.
+        "extracted_text": text[:80000],
         "extraction_note": (
             "Review the extracted fields before analyzing; resume formats may vary."
         ),

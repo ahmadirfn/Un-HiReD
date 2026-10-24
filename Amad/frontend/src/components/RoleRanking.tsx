@@ -1,4 +1,5 @@
 import MagneticButton from "./MagneticButton";
+import { useLanguage } from "../store/languageStore";
 
 export interface LearningResource {
   platform: string;
@@ -12,6 +13,9 @@ export interface RoleMatch {
   skillsGap: string[];
   demandTrajectory: string;
   resources: LearningResource[];
+  scoring_basis: string;
+  learning_pathway: { step: number; skill: string; estimated_time: string }[];
+  sdgs: import("./SdgMapping").SdgAlignment[];
 }
 
 interface RoleRankingProps {
@@ -19,6 +23,8 @@ interface RoleRankingProps {
   selectedRole: string;
   loading?: boolean;
   onSelectRole: (role: RoleMatch) => void;
+  trendSource?: string;
+  lastUpdated?: string;
 }
 
 export default function RoleRanking({
@@ -26,13 +32,17 @@ export default function RoleRanking({
   selectedRole,
   loading = false,
   onSelectRole,
+  trendSource,
+  lastUpdated,
 }: RoleRankingProps) {
+  const { t } = useLanguage();
   return (
-    <section className="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-xl dark:border-slate-800 dark:bg-[#161b22] sm:p-8" aria-labelledby="role-ranking-heading">
+    <section className="rounded-2xl border border-slate-200/90 bg-slate-100/80 p-6 shadow-sm dark:border-slate-800 dark:bg-[#161b22] sm:p-8" aria-labelledby="role-ranking-heading">
       <div className="mb-5">
-        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-rose-300">Explore your options</p>
-        <h2 id="role-ranking-heading" className="mt-1 text-xl font-semibold text-gray-900 dark:text-white">Ranked future roles</h2>
-        <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">Scores reflect how closely each path fits your current profile.</p>
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-rose-700 dark:text-rose-300">{t("Explore your options")}</p>
+        <h2 id="role-ranking-heading" className="mt-1 text-xl font-semibold text-slate-950 dark:text-white">{t("Ranked future roles")}</h2>
+        <p className="mt-2 text-sm text-slate-700 dark:text-slate-300">{t("Scores reflect how closely each path fits your current profile.")}</p>
+        {trendSource && <p className="mt-3 inline-flex rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">Source: {trendSource} <span className="mx-1.5 text-slate-400">|</span> Updated: {lastUpdated || "date unavailable"}</p>}
       </div>
 
       {loading ? (
@@ -56,11 +66,12 @@ export default function RoleRanking({
                 >
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div>
-                      <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">#{index + 1} match</p>
+                      <p className="text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400">#{index + 1} {t("match")}</p>
                       <h3 className="mt-1 font-semibold text-gray-900 dark:text-white">{role.roleName}</h3>
                     </div>
                     <span className="rounded-full border border-rose-500/20 bg-rose-500/10 px-2.5 py-1 text-xs font-semibold text-rose-800 dark:text-rose-200">{score}% match</span>
                   </div>
+                  {role.scoring_basis && <p className="mb-3 text-sm leading-5 text-slate-700 dark:text-slate-300">{t("Why this match")}: {role.scoring_basis}</p>}
                   <div
                     className="mt-3 mb-4 h-2 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700"
                     role="progressbar"
@@ -73,11 +84,11 @@ export default function RoleRanking({
                   </div>
                   <div className="mt-3 flex flex-wrap items-center gap-2">
                     <span className="mr-2 inline-flex items-center rounded-full bg-emerald-100 px-3 py-1 text-xs font-medium text-emerald-800 dark:border dark:border-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400">
-                      <span className="font-semibold">Market Insight: </span>&nbsp;{role.demandTrajectory}
+                      <span className="font-semibold">{t("Market Insight:")} </span>&nbsp;{role.demandTrajectory}
                     </span>
-                    {role.skillsGap.length > 0 && <span className="rounded-full border border-amber-500/25 bg-amber-500/10 px-2.5 py-1 text-xs text-amber-900 dark:text-amber-200">Reskilling required</span>}
+                    {role.skillsGap.length > 0 && <span className="rounded-full border border-amber-500/30 bg-amber-100 px-2.5 py-1 text-xs font-medium text-amber-950 dark:bg-amber-500/10 dark:text-amber-200">{t("Reskilling required")}</span>}
                   </div>
-                  {role.skillsGap.length > 0 && <p className="mt-3 text-xs leading-5 text-gray-600 dark:text-gray-400">Skills to build: {role.skillsGap.join(", ")}</p>}
+                  {role.skillsGap.length > 0 && <p className="mt-3 text-sm leading-5 text-slate-700 dark:text-slate-300">{t("Skills to build:")} {role.skillsGap.join(", ")}</p>}
                 </button>
                 </MagneticButton>
               </li>
