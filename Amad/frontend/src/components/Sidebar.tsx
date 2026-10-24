@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { LogOut, Moon, Sun } from "lucide-react";
+import { CircleHelp, Home, LogOut, Moon, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
 
 export type WorkspaceSection = "profile" | "cv" | "matches" | "pathway" | "impact";
@@ -50,31 +50,15 @@ export default function Sidebar({
           <NavigationGroup title="EXPLORE" items={EXPLORE_ITEMS} activeSection={activeSection} onNavigate={onNavigate} />
         </nav>
 
-        <div className="border-t border-slate-200/80 pt-5 dark:border-slate-800">
-          <div className="flex items-center justify-between gap-1">
-            <ThemeToggle mounted={mounted} resolvedTheme={resolvedTheme} theme={theme} setTheme={setTheme} />
-            <div className="flex items-center gap-2 text-[11px] text-slate-600 dark:text-gray-400">
-              <button type="button" onClick={() => onNavigate("profile")} className="whitespace-nowrap transition hover:text-rose-700 dark:hover:text-rose-300">Main page</button>
-              <a href="#how-it-works" onClick={() => onNavigate("profile")} className="whitespace-nowrap transition hover:text-rose-700 dark:hover:text-rose-300">How it works</a>
-            </div>
-            <button
-              type="button"
-              onClick={onLogout}
-              aria-label="Log out and return to onboarding"
-              title="Logout"
-              className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-700 transition hover:bg-red-50 hover:text-red-600 focus:outline-none focus:ring-2 focus:ring-red-500 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-red-950/40 dark:hover:text-red-400"
-            >
-              <LogOut aria-hidden="true" className="h-4 w-4" />
-            </button>
-          </div>
-          <div className="mt-4 flex min-w-0 items-center gap-3 px-2">
-            <Avatar name={userName} />
-            <div className="min-w-0">
-              <p className="truncate text-sm font-medium text-gray-900 dark:text-white">{userName || "Your profile"}</p>
-              <p className="text-xs text-slate-600 dark:text-gray-400">Career workspace</p>
-            </div>
-          </div>
-        </div>
+        <SidebarFooter
+          userName={userName}
+          onNavigate={onNavigate}
+          onLogout={onLogout}
+          mounted={mounted}
+          resolvedTheme={resolvedTheme}
+          theme={theme}
+          setTheme={setTheme}
+        />
       </aside>
 
       <div className="sticky top-0 z-40 border-b border-slate-200/80 bg-slate-50/95 px-4 py-3 backdrop-blur dark:border-slate-800 dark:bg-[#161b22]/95 lg:hidden">
@@ -86,25 +70,65 @@ export default function Sidebar({
             <NavButton key={item.id} item={item} active={activeSection === item.id} onNavigate={onNavigate} compact />
           ))}
         </nav>
-        <div className="mt-2 border-t border-slate-200/80 pt-2 dark:border-slate-800">
-          <div className="flex items-center justify-between gap-1">
-            <ThemeToggle mounted={mounted} resolvedTheme={resolvedTheme} theme={theme} setTheme={setTheme} />
-            <div className="flex items-center gap-2 text-[11px] text-slate-600 dark:text-gray-400">
-              <button type="button" onClick={() => onNavigate("profile")} className="whitespace-nowrap transition hover:text-rose-700 dark:hover:text-rose-300">Main page</button>
-              <a href="#how-it-works" onClick={() => onNavigate("profile")} className="whitespace-nowrap transition hover:text-rose-700 dark:hover:text-rose-300">How it works</a>
-            </div>
-            <button type="button" onClick={onLogout} aria-label="Log out and return to onboarding" title="Logout" className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-700 transition hover:bg-red-50 hover:text-red-600 focus:outline-none focus:ring-2 focus:ring-red-500 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-red-950/40 dark:hover:text-red-400"><LogOut aria-hidden="true" className="h-4 w-4" /></button>
-          </div>
-          <div className="mt-3 flex min-w-0 items-center gap-3 px-1">
-            <Avatar name={userName} />
-            <div className="min-w-0">
-              <p className="truncate text-xs font-medium text-gray-900 dark:text-white">{userName || "Your profile"}</p>
-              <p className="text-[10px] text-slate-600 dark:text-gray-400">Career workspace</p>
-            </div>
-          </div>
-        </div>
+        <SidebarFooter
+          userName={userName}
+          onNavigate={onNavigate}
+          onLogout={onLogout}
+          mounted={mounted}
+          resolvedTheme={resolvedTheme}
+          theme={theme}
+          setTheme={setTheme}
+          compact
+        />
       </div>
     </>
+  );
+}
+
+function SidebarFooter({
+  userName,
+  onNavigate,
+  onLogout,
+  mounted,
+  resolvedTheme,
+  theme,
+  setTheme,
+  compact = false,
+}: {
+  userName: string;
+  onNavigate: (section: WorkspaceSection) => void;
+  onLogout: () => void;
+  mounted: boolean;
+  resolvedTheme?: string;
+  theme?: string;
+  setTheme: (theme: string) => void;
+  compact?: boolean;
+}) {
+  return (
+    <div className={`${compact ? "mt-2 border-t border-slate-200/80 pt-2 dark:border-slate-800" : "border-t border-slate-200/80 pt-4 dark:border-slate-800"}`}>
+      <div className="grid grid-cols-2 gap-2">
+        <button type="button" onClick={() => onNavigate("profile")} className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-slate-200/80 bg-white px-2 py-2 text-xs font-medium text-slate-700 transition hover:bg-slate-100 hover:text-slate-950 dark:border-slate-800 dark:bg-[#161b22] dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white">
+          <Home aria-hidden="true" className="h-3.5 w-3.5" />
+          Main page
+        </button>
+        <a href="#how-it-works" onClick={() => onNavigate("profile")} className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-slate-200/80 bg-white px-2 py-2 text-xs font-medium text-slate-700 transition hover:bg-slate-100 hover:text-slate-950 dark:border-slate-800 dark:bg-[#161b22] dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white">
+          <CircleHelp aria-hidden="true" className="h-3.5 w-3.5" />
+          How it works
+        </a>
+      </div>
+      <div className="mt-3 flex min-w-0 items-center justify-between gap-2 rounded-xl border border-slate-200/80 bg-white p-2 dark:border-slate-800 dark:bg-[#0f1117]">
+        <div className="flex min-w-0 items-center gap-2">
+          <Avatar name={userName} />
+          <div className="min-w-0">
+            <p title={userName || "Your profile"} className={`truncate font-medium text-slate-900 dark:text-white ${compact ? "text-xs" : "text-sm"}`}>{userName || "Your profile"}</p>
+          </div>
+        </div>
+        <div className="flex shrink-0 items-center gap-1">
+          <ThemeToggle mounted={mounted} resolvedTheme={resolvedTheme} theme={theme} setTheme={setTheme} />
+          <button type="button" onClick={onLogout} aria-label="Log out and return to onboarding" title="Logout" className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-700 transition hover:bg-red-50 hover:text-red-600 focus:outline-none focus:ring-2 focus:ring-red-500 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-red-950/40 dark:hover:text-red-400"><LogOut aria-hidden="true" className="h-4 w-4" /></button>
+        </div>
+      </div>
+    </div>
   );
 }
 
